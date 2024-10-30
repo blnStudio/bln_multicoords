@@ -1,0 +1,30 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <head>
+        <title>BLN Studio | RedM Multi Coords</title>
+    </head>
+</head>
+<body>
+    <script>
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'copyCoords') {
+                const coords = event.data.coords;
+                let coordsString = "{\n";
+                coords.forEach(point => {
+                    coordsString += `    vector4(${point.x}, ${point.y}, ${point.z}, ${point.h}),\n`;
+                });
+                coordsString += "}";
+                const el = document.createElement('textarea');
+                el.value = coordsString;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+            }
+        });
+    </script>
+</body>
+</html>
