@@ -2,7 +2,7 @@
 
 A simple developer resource for RedM that allows you to collect coordinates with heading (vector4) by walking around the map. Perfect for creating locations, spawn points, or any other position-based data for your RedM scripts.
 
-<img src="./.github/assets/banner.png" style="width:100%" alt="bln multicoords redm script - bln studio" />
+<img src="./.github/assets/banner.png" style="width:100%" alt="bln multicoords redm script - standalone - bln studio" />
 
 ## Demo
 [Video Preview](https://youtu.be/QSGFewxUQ60)
