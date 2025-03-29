@@ -4,8 +4,11 @@ A simple developer resource for RedM that allows you to collect coordinates with
 
 <img src="./.github/assets/banner.png" style="width:100%" alt="bln multicoords redm script - standalone - bln studio" />
 
-## Demo
-[Video Preview](https://youtu.be/QSGFewxUQ60)
+
+[![](https://img.shields.io/badge/YouTube-FF0000?style=flat&logo=youtube&logoColor=white)](https://youtu.be/QSGFewxUQ60)
+[![Discord](https://img.shields.io/badge/Discord-1111?style=flat&logo=discord&logoColor=white&color=7289da)](https://discord.bln-studio.com/)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/blnStudio/bln_multicoords)
+![License](https://img.shields.io/github/license/blnStudio/bln_multicoords)
 
 ## Features
 
