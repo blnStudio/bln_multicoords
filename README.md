@@ -58,9 +58,9 @@ A simple developer resource for RedM that allows you to collect coordinates with
 - Visual markers remain visible while collecting to help visualize the path
 - Heading is shown with a red marker pointing in the facing direction
 
-## Support
-Join our Discord for support and updates:
-https://discord.com/invite/MEZRYQVpnt
+## Support 💬
+Need help? Join our Discord server:
+[Join Discord](https://discord.bln-studio.com/)
 
 ## License
 Free to use and modify. Please retain credits if redistributing.
