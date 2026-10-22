@@ -1,28 +1,211 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
-    <head>
-        <title>BLN Studio | RedM Multi Coords</title>
-    </head>
+    <title>BLN Multi Coords</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: system-ui, sans-serif;
+            overflow: hidden;
+        }
+
+        #overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            place-items: center;
+            padding: 16px;
+        }
+
+        #overlay.visible { display: grid; }
+
+        .card {
+            width: min(480px, 100%);
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #e8e8e8;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        }
+
+        .top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border-bottom: 1px solid #2e2e2e;
+        }
+
+        .top span {
+            font-size: 13px;
+            font-weight: 600;
+            color: #f0f0f0;
+        }
+
+        button {
+            border: 1px solid #444;
+            background: #252525;
+            color: #e8e8e8;
+            border-radius: 6px;
+            cursor: pointer;
+            font: inherit;
+            line-height: 1;
+        }
+
+        button:hover {
+            background: #2f2f2f;
+            border-color: #555;
+        }
+
+        #closeBtn {
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            font-size: 18px;
+            color: #aaa;
+        }
+
+        #closeBtn:hover { color: #fff; }
+
+        #coordsText {
+            display: block;
+            width: 100%;
+            min-height: 180px;
+            max-height: 320px;
+            padding: 12px 14px;
+            border: none;
+            border-bottom: 1px solid #2e2e2e;
+            background: #121212;
+            color: #d4d4d4;
+            font: 12px/1.45 Consolas, monospace;
+            resize: vertical;
+        }
+
+        #coordsText:focus {
+            outline: none;
+            box-shadow: inset 0 0 0 1px #444;
+        }
+
+        .bottom {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 12px 14px;
+        }
+
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            font-size: 13px;
+        }
+
+        .action-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+    </style>
 </head>
 <body>
+    <div id="overlay">
+        <div class="card">
+            <div class="top">
+                <span>Coords</span>
+                <button type="button" id="closeBtn" aria-label="Close">&times;</button>
+            </div>
+            <textarea id="coordsText" readonly spellcheck="false"></textarea>
+            <div class="bottom">
+                <button type="button" class="action-btn" id="collectAgainBtn">Collect again</button>
+                <button type="button" class="action-btn" id="copyBtn" aria-label="Copy">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                    <span id="copyLabel">Copy</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        window.addEventListener('message', function(event) {
-            if (event.data.type === 'copyCoords') {
-                const coords = event.data.coords;
-                let coordsString = "{\n";
-                coords.forEach(point => {
-                    coordsString += `    vector4(${point.x}, ${point.y}, ${point.z}, ${point.h}),\n`;
-                });
-                coordsString += "}";
-                const el = document.createElement('textarea');
-                el.value = coordsString;
-                document.body.appendChild(el);
-                el.select();
-                document.execCommand('copy');
-                document.body.removeChild(el);
+        const overlay = document.getElementById('overlay');
+        const coordsText = document.getElementById('coordsText');
+        const copyLabel = document.getElementById('copyLabel');
+        const closeBtn = document.getElementById('closeBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const collectAgainBtn = document.getElementById('collectAgainBtn');
+
+        const COPY_RESET_MS = 2000;
+        let copyResetTimer = null;
+
+        function getResourceName() {
+            return window.GetParentResourceName ? GetParentResourceName() : 'bln_multicoords';
+        }
+
+        function postNui(action) {
+            fetch('https://' + getResourceName() + '/' + action, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+                body: '{}'
+            }).catch(function() {});
+        }
+
+        function resetCopyLabel() {
+            if (copyResetTimer) {
+                clearTimeout(copyResetTimer);
+                copyResetTimer = null;
             }
+            copyLabel.textContent = 'Copy';
+        }
+
+        function hideCard() {
+            overlay.classList.remove('visible');
+            resetCopyLabel();
+        }
+
+        function showCard(text) {
+            coordsText.value = text || '';
+            resetCopyLabel();
+            overlay.classList.add('visible');
+        }
+
+        function copyToClipboard() {
+            coordsText.focus();
+            coordsText.select();
+            coordsText.setSelectionRange(0, coordsText.value.length);
+            var ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) {}
+
+            resetCopyLabel();
+            if (ok) {
+                copyLabel.textContent = 'Copied';
+                copyResetTimer = setTimeout(function() {
+                    copyLabel.textContent = 'Copy';
+                    copyResetTimer = null;
+                }, COPY_RESET_MS);
+            }
+        }
+
+        copyBtn.addEventListener('click', copyToClipboard);
+        collectAgainBtn.addEventListener('click', function() {
+            hideCard();
+            postNui('collectAgain');
+        });
+        closeBtn.addEventListener('click', function() {
+            hideCard();
+            postNui('closeCoordsCard');
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && overlay.classList.contains('visible')) {
+                hideCard();
+                postNui('closeCoordsCard');
+            }
+        });
+        window.addEventListener('message', function(e) {
+            if (e.data.type === 'showResult') showCard(e.data.text);
+            else if (e.data.type === 'hideResult') hideCard();
         });
     </script>
 </body>
