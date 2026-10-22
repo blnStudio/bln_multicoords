@@ -7,13 +7,6 @@ local MARKER_TYPE = 0x94FDAE17
 local Control = {
     ENTER = 0xC7B5340A,
     BACKSPACE = 0x156F7119,
-    MOUSE_LEFT = 0x07CE1E61,
-    MOVE_LR = 0xA987235F,
-    MOVE_FORWARD = 0x8FD015D8,
-    MOVE_BACK = 0xD27782E3,
-    MOVE_UP = 0x6319DB71,
-    MOVE_DOWN = 0x05CA7C52,
-    SPRINT = 0x8FFC75D6,
 }
 
 local state = {
@@ -21,22 +14,12 @@ local state = {
     markers = {},
     isCollecting = false,
     isResultOpen = false,
-    mode = nil,
-    lastMode = 'walk',
-    isFlyMode = false,
 }
 
 local closeCoordsCard
 local startCollection
 local tryAddPoint
 local finishCollection
-
-local function setFlyMode(enabled)
-    local ped = PlayerPedId()
-    state.isFlyMode = enabled
-    FreezeEntityPosition(ped, enabled)
-    SetEntityCollision(ped, not enabled, not enabled)
-end
 
 local function isPositionTooClose(newPos, points)
     local newVec = vector3(newPos.x, newPos.y, newPos.z)
@@ -105,23 +88,18 @@ local function openResultCard(text)
     SetNuiFocus(true, true)
 end
 
-startCollection = function(mode)
+startCollection = function()
     closeCoordsCard()
-    state.mode = mode
-    state.lastMode = mode
     state.isCollecting = true
     state.coords = {}
     state.markers = {}
-    setFlyMode(false)
 end
 
 finishCollection = function()
     state.isCollecting = false
-    setFlyMode(false)
 
     if #state.coords == 0 then
         state.markers = {}
-        state.mode = nil
         return
     end
 
@@ -133,14 +111,12 @@ finishCollection = function()
 
     state.coords = {}
     state.markers = {}
-    state.mode = nil
     openResultCard(text)
 end
 
 local function collectAgain()
-    local mode = state.lastMode or 'walk'
     closeCoordsCard()
-    startCollection(mode)
+    startCollection()
 end
 
 local function drawText(text, x, y, scale)
@@ -181,72 +157,6 @@ local function drawMarkers()
     end
 end
 
-local function drawCollectionPrompt()
-    if state.mode == 'aim' then
-        drawText('Aim with camera, ~o~[MOUSE LEFT]~q~ add, ~o~[BACKSPACE]~q~ finish, ~o~[/mcoordsfly]~q~ toggle fly', 0.5, 0.95, 0.35)
-        drawText('+', 0.5, 0.5, 0.3)
-        return
-    end
-    drawText('Press ~o~[ENTER]~q~ to add point, ~o~[BACKSPACE]~q~ to finish', 0.5, 0.95, 0.35)
-end
-
-local function rotationToDirection(rot)
-    local radX = math.rad(rot.x)
-    local radZ = math.rad(rot.z)
-    local num = math.abs(math.cos(radX))
-    return vector3(-math.sin(radZ) * num, math.cos(radZ) * num, math.sin(radX))
-end
-
-local function getCameraHitCoord()
-    if not StartShapeTestRay or not GetShapeTestResult then
-        return nil
-    end
-
-    local ped = PlayerPedId()
-    local camCoord = GetGameplayCamCoord()
-    local camDir = rotationToDirection(GetGameplayCamRot(2))
-    local destination = camCoord + (camDir * 1000.0)
-
-    local rayHandle = StartShapeTestRay(
-        camCoord.x, camCoord.y, camCoord.z,
-        destination.x, destination.y, destination.z,
-        511, ped, 7
-    )
-
-    local result, hit, endCoords = GetShapeTestResult(rayHandle)
-    for _ = 1, 10 do
-        if result ~= 1 then
-            break
-        end
-        Wait(0)
-        result, hit, endCoords = GetShapeTestResult(rayHandle)
-    end
-
-    if result == 2 and hit == 1 then
-        return vector3(endCoords.x, endCoords.y, endCoords.z)
-    end
-    return nil
-end
-
-local function movePlayerFlyMode(speed)
-    local ped = PlayerPedId()
-    local camDir = rotationToDirection(GetGameplayCamRot(2))
-    local camRight = vector3(-camDir.y, camDir.x, 0.0)
-    local pos = GetEntityCoords(ped)
-
-    local moveForward = GetControlNormal(0, Control.MOVE_FORWARD) - GetControlNormal(0, Control.MOVE_BACK)
-    local moveRight = GetControlNormal(0, Control.MOVE_LR)
-    local moveUp = GetControlNormal(0, Control.MOVE_UP) - GetControlNormal(0, Control.MOVE_DOWN)
-
-    local nextPos = vector3(
-        pos.x + (camDir.x * moveForward * speed) + (camRight.x * moveRight * speed),
-        pos.y + (camDir.y * moveForward * speed) + (camRight.y * moveRight * speed),
-        pos.z + (camDir.z * moveForward * speed) + (moveUp * speed)
-    )
-
-    SetEntityCoordsNoOffset(ped, nextPos.x, nextPos.y, nextPos.z, false, false, false)
-end
-
 tryAddPoint = function(newCoord)
     if isPositionTooClose(newCoord, state.markers) then
         return
@@ -261,50 +171,8 @@ local function addPointFromPlayer()
     tryAddPoint({ x = pos.x, y = pos.y, z = pos.z, h = GetEntityHeading(ped) })
 end
 
-local function addPointFromAim()
-    local hitCoord = getCameraHitCoord()
-    if not hitCoord then
-        return
-    end
-    tryAddPoint({
-        x = hitCoord.x,
-        y = hitCoord.y,
-        z = hitCoord.z,
-        h = GetGameplayCamRot(2).z,
-    })
-end
-
-local function handleCollectionInput()
-    if state.mode == 'aim' then
-        if state.isFlyMode then
-            local speed = IsControlPressed(0, Control.SPRINT) and 1.2 or 0.45
-            movePlayerFlyMode(speed)
-        end
-
-        DisableControlAction(0, Control.MOUSE_LEFT, true)
-        if IsDisabledControlJustPressed(0, Control.MOUSE_LEFT) then
-            addPointFromAim()
-        end
-        return
-    end
-
-    if IsControlJustPressed(0, Control.ENTER) then
-        addPointFromPlayer()
-    end
-end
-
 RegisterCommand('mcoords', function()
-    startCollection('walk')
-end, false)
-
-RegisterCommand('mcoordsaim', function()
-    startCollection('aim')
-end, false)
-
-RegisterCommand('mcoordsfly', function()
-    if state.isCollecting and state.mode == 'aim' then
-        setFlyMode(not state.isFlyMode)
-    end
+    startCollection()
 end, false)
 
 RegisterNUICallback('closeCoordsCard', function(_, cb)
@@ -320,9 +188,12 @@ end)
 CreateThread(function()
     while true do
         if state.isCollecting then
-            drawCollectionPrompt()
+            drawText('Press ~o~[ENTER]~q~ to add point, ~o~[BACKSPACE]~q~ to finish', 0.5, 0.95, 0.35)
             drawMarkers()
-            handleCollectionInput()
+
+            if IsControlJustPressed(0, Control.ENTER) then
+                addPointFromPlayer()
+            end
 
             if IsControlJustPressed(0, Control.BACKSPACE) then
                 finishCollection()
