@@ -18,7 +18,6 @@ Full install, commands, configuration, and usage:
 
 ## Links
 
-- [GitHub](https://github.com/blnStudio/bln_multicoords)
 - [Discord](https://discord.bln-studio.com)
 
 ## License
